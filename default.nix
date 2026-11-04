@@ -48,6 +48,7 @@ let
         installerRaw
         p.xvfb-run
         p.xdg-user-dirs
+        p.libnotify
         p.stdenv.cc.cc
         p.zlib
         p.zstd
@@ -130,14 +131,32 @@ let
         run_silent_installer() {
           bootstrap_install_dir
           echo "Running silent headless installation/update for X-Plane 12 (${edition}) in $INSTALL_DIR..."
+          echo "Log file: $INSTALL_DIR/X-Plane Installer Log.txt"
+          notify-send "X-Plane 12 (${edition})" "Downloading and installing simulator files in $INSTALL_DIR..." 2>/dev/null || true
+
           WAYLAND_DISPLAY="" xvfb-run -a -s "-screen 0 1024x768x24" \
             "${installerRaw}/bin/xplane-installer" \
             --silent \
             --path="$INSTALL_DIR" \
             --log="$INSTALL_DIR/X-Plane Installer Log.txt" \
             ${extraSilentArgs} \
-            "$@"
+            "$@" &
+          INSTALLER_PID=$!
+
+          trap 'kill "$INSTALLER_PID" 2>/dev/null || true' INT TERM
+
+          while kill -0 "$INSTALLER_PID" 2>/dev/null; do
+            sleep 10 || break
+            if kill -0 "$INSTALLER_PID" 2>/dev/null; then
+              CURRENT_SIZE=$(du -sh "$INSTALL_DIR" 2>/dev/null | cut -f1 || echo "0B")
+              echo "[xplane-${edition}] Still downloading/installing... Current folder size: $CURRENT_SIZE ($INSTALL_DIR)"
+            fi
+          done
+
+          wait "$INSTALLER_PID"
+          trap - INT TERM
           touch "$COMPLETE_MARKER"
+          notify-send "X-Plane 12 (${edition})" "Installation/update complete!" 2>/dev/null || true
         }
 
         if [ "''${1:-}" = "--installer-gui" ]; then
@@ -159,10 +178,23 @@ let
         fi
       '';
     };
+
+  mkDesktopEntry = edition:
+    let
+      title = if edition == "demo" then "Demo" else "Full";
+    in
+    pkgs.makeDesktopItem {
+      name = "xplane-${edition}";
+      desktopName = "X-Plane 12 (${title})";
+      comment = "X-Plane 12 Flight Simulator (${title})";
+      exec = "xplane-${edition}";
+      categories = [ "Game" "Simulation" ];
+      terminal = false;
+    };
 in
 pkgs.symlinkJoin {
   name = "xplane-12";
   paths =
-    (lib.optional enableDemo (mkXplaneFhs "demo"))
-    ++ (lib.optional enableFull (mkXplaneFhs "full"));
+    (lib.optionals enableDemo [ (mkXplaneFhs "demo") (mkDesktopEntry "demo") ])
+    ++ (lib.optionals enableFull [ (mkXplaneFhs "full") (mkDesktopEntry "full") ]);
 }
