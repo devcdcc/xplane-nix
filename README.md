@@ -6,6 +6,10 @@ It provides two feature flags:
 - `enableDemo`: Installs and launches the **Demo** environment (`xplane-demo`).
 - `enableFull`: Installs and launches the **Full** version environment (`xplane-full`).
 
+Files are stored in the standard XDG user data directory:
+- Demo: `~/.local/share/xplane-12/demo`
+- Full: `~/.local/share/xplane-12/full`
+
 ---
 
 ## Quick Install (User Profile)
@@ -35,14 +39,14 @@ nix-env -if default.nix --arg enableDemo false --arg enableFull true
 
 ---
 
-## Enable via NixOS or Home Manager Module
+## Declarative Configuration (NixOS / Home Manager)
 
 Import the module from the flake (`nixosModules.default` or `homeManagerModules.default`) and enable either or both flags:
 
 ```nix
 programs.xplane = {
   enableDemo = true;
-  enableFull = true;
+  enableFull = false;
 };
 ```
 
@@ -50,21 +54,26 @@ programs.xplane = {
 
 ## Usage
 
-Run the command corresponding to the flag you enabled:
+Run the command corresponding to the flag you enabled. On first run, it automatically performs a silent headless installation into `~/.local/share/xplane-12/<edition>` without popping up an installer window, and then starts the simulator:
 
 ```bash
-# Launch Demo installer (or start the simulator if already installed in ~/X-Plane-12-demo)
+# Auto-install (silently) and launch Demo
 xplane-demo
 
-# Launch Full installer (or start the simulator if already installed in ~/X-Plane-12-full)
+# Auto-install (silently) and launch Full
 xplane-full
 ```
 
-To force opening the installer again after installation (for updates or scenery):
+Additional flags:
 
 ```bash
-xplane-demo --installer
-xplane-full --installer
+# Run a silent headless update only
+xplane-demo --update
+xplane-full --update
+
+# Open the interactive GUI installer (e.g. for Full license login or scenery map)
+xplane-demo --installer-gui
+xplane-full --installer-gui
 ```
 
 ## License

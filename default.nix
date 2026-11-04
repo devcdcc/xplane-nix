@@ -38,11 +38,15 @@ let
   };
 
   mkXplaneFhs = edition:
+    let
+      extraSilentArgs = if edition == "demo" then "--no-scenery" else "";
+    in
     pkgs.buildFHSEnv {
       name = "xplane-${edition}";
 
       targetPkgs = p: [
         installerRaw
+        p.xvfb-run
         p.stdenv.cc.cc
         p.zlib
         p.glib
@@ -79,17 +83,48 @@ let
       ];
 
       runScript = pkgs.writeShellScript "xplane-${edition}-launcher" ''
+        set -euo pipefail
         export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
-        INSTALL_DIR="$HOME/X-Plane-12-${edition}"
-        GAME_BIN="$INSTALL_DIR/X-Plane-x86_64"
 
-        if [ "''${1:-}" = "--installer" ] || [ ! -x "$GAME_BIN" ]; then
-          if [ "''${1:-}" = "--installer" ]; then
-            shift
+        DATA_HOME="''${XDG_DATA_HOME:-$HOME/.local/share}"
+        INSTALL_DIR="$DATA_HOME/xplane-12/${edition}"
+        GAME_BIN="$INSTALL_DIR/X-Plane-x86_64"
+        PREFS_DIR="$HOME/.x-plane"
+        INSTALL_LIST="$PREFS_DIR/x-plane_install_12.txt"
+
+        bootstrap_install_dir() {
+          mkdir -p "$INSTALL_DIR/Resources/bitmaps/Earth Orbit Textures"
+          mkdir -p "$PREFS_DIR"
+          touch "$INSTALL_LIST"
+          if ! grep -Fxq "$INSTALL_DIR/" "$INSTALL_LIST"; then
+            echo "$INSTALL_DIR/" >> "$INSTALL_LIST"
           fi
-          echo "Starting X-Plane 12 (${edition}) installer..."
-          echo "Select '$INSTALL_DIR' as your install destination."
+        }
+
+        run_silent_installer() {
+          bootstrap_install_dir
+          echo "Running silent headless installation/update for X-Plane 12 (${edition}) in $INSTALL_DIR..."
+          WAYLAND_DISPLAY="" xvfb-run -a -s "-screen 0 1024x768x24" \
+            "${installerRaw}/bin/xplane-installer" \
+            --silent \
+            --path="$INSTALL_DIR" \
+            ${extraSilentArgs} \
+            "$@"
+        }
+
+        if [ "''${1:-}" = "--installer-gui" ]; then
+          shift
+          bootstrap_install_dir
           exec "${installerRaw}/bin/xplane-installer" "$@"
+        elif [ "''${1:-}" = "--installer" ] || [ "''${1:-}" = "--update" ] || [ "''${1:-}" = "--silent" ]; then
+          shift
+          run_silent_installer "$@"
+        elif [ ! -x "$GAME_BIN" ]; then
+          run_silent_installer
+          if [ -x "$GAME_BIN" ]; then
+            cd "$INSTALL_DIR"
+            exec "$GAME_BIN" "$@"
+          fi
         else
           cd "$INSTALL_DIR"
           exec "$GAME_BIN" "$@"
