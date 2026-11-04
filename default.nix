@@ -47,6 +47,7 @@ let
       targetPkgs = p: [
         installerRaw
         p.xvfb-run
+        p.xdg-user-dirs
         p.stdenv.cc.cc
         p.zlib
         p.zstd
@@ -108,7 +109,7 @@ let
       runScript = pkgs.writeShellScript "xplane-${edition}-launcher" ''
         set -euo pipefail
         export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
-        export LD_LIBRARY_PATH="/usr/lib:/usr/lib64''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="${pkgs.ncurses.out}/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
         DATA_HOME="''${XDG_DATA_HOME:-$HOME/.local/share}"
         INSTALL_DIR="$DATA_HOME/xplane-12/${edition}"
