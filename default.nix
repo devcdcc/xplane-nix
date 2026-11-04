@@ -46,7 +46,10 @@ let
         p.stdenv.cc.cc
         p.zlib
         p.glib
+        p.glib-networking
         p.gtk3
+        p.webkitgtk_4_1
+        p.libsoup_3
         p.pango
         p.harfbuzz
         p.cairo
@@ -76,6 +79,7 @@ let
       ];
 
       runScript = pkgs.writeShellScript "xplane-${edition}-launcher" ''
+        export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
         INSTALL_DIR="$HOME/X-Plane-12-${edition}"
         GAME_BIN="$INSTALL_DIR/X-Plane-x86_64"
 
