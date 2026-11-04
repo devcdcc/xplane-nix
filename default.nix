@@ -49,6 +49,7 @@ let
         p.xvfb-run
         p.stdenv.cc.cc
         p.zlib
+        p.zstd
         p.glib
         p.glib-networking
         p.gtk3
@@ -62,8 +63,25 @@ let
         p.dbus
         p.fontconfig
         p.freetype
+        p.expat
+        p.libbsd
+        p.libdrm
+        p.libedit
+        p.libsecret
+        p.libva
         p.libxkbcommon
+        p.lm_sensors
+        p.mesa
+        (p.libgbm or p.mesa)
+        p.ncurses
+        p.nspr
+        p.nss
+        p.pciutils
+        p.pipewire
+        p.cups
+        p.util-linux
         p.wayland
+        (p.libxcb or p.xorg.libxcb)
         (p.libX11 or p.xorg.libX11)
         (p.libXext or p.xorg.libXext)
         (p.libXrender or p.xorg.libXrender)
@@ -72,6 +90,11 @@ let
         (p.libXcursor or p.xorg.libXcursor)
         (p.libXinerama or p.xorg.libXinerama)
         (p.libXxf86vm or p.xorg.libXxf86vm)
+        (p.libXcomposite or p.xorg.libXcomposite)
+        (p.libXdamage or p.xorg.libXdamage)
+        (p.libXfixes or p.xorg.libXfixes)
+        (p.libxshmfence or p.xorg.libxshmfence)
+        (p.libXtst or p.xorg.libXtst)
         p.libGL
         p.libGLU
         p.vulkan-loader
@@ -85,10 +108,12 @@ let
       runScript = pkgs.writeShellScript "xplane-${edition}-launcher" ''
         set -euo pipefail
         export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
+        export LD_LIBRARY_PATH="/usr/lib:/usr/lib64''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
         DATA_HOME="''${XDG_DATA_HOME:-$HOME/.local/share}"
         INSTALL_DIR="$DATA_HOME/xplane-12/${edition}"
         GAME_BIN="$INSTALL_DIR/X-Plane-x86_64"
+        COMPLETE_MARKER="$INSTALL_DIR/.xplane-install-complete"
         PREFS_DIR="$HOME/.x-plane"
         INSTALL_LIST="$PREFS_DIR/x-plane_install_12.txt"
 
@@ -108,8 +133,10 @@ let
             "${installerRaw}/bin/xplane-installer" \
             --silent \
             --path="$INSTALL_DIR" \
+            --log="$INSTALL_DIR/X-Plane Installer Log.txt" \
             ${extraSilentArgs} \
             "$@"
+          touch "$COMPLETE_MARKER"
         }
 
         if [ "''${1:-}" = "--installer-gui" ]; then
@@ -119,7 +146,7 @@ let
         elif [ "''${1:-}" = "--installer" ] || [ "''${1:-}" = "--update" ] || [ "''${1:-}" = "--silent" ]; then
           shift
           run_silent_installer "$@"
-        elif [ ! -x "$GAME_BIN" ]; then
+        elif [ ! -x "$GAME_BIN" ] || [ ! -f "$COMPLETE_MARKER" ]; then
           run_silent_installer
           if [ -x "$GAME_BIN" ]; then
             cd "$INSTALL_DIR"
