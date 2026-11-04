@@ -14,13 +14,13 @@ Install directly into your user profile using Nix Flakes:
 
 ```bash
 # Install the Demo version (default)
-nix profile install github:devcdcc/xplane-nix#demo
+nix profile add github:devcdcc/xplane-nix#demo
 
 # Install the Full version
-nix profile install github:devcdcc/xplane-nix#full
+nix profile add github:devcdcc/xplane-nix#full
 
 # Install both Demo and Full versions
-nix profile install github:devcdcc/xplane-nix#all
+nix profile add github:devcdcc/xplane-nix#all
 ```
 
 Or using `default.nix` with feature flags:
